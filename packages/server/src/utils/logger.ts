@@ -4,6 +4,7 @@ import { hostname } from 'node:os'
 import config from './config' // should be replaced by node-config or similar
 import { createLogger, transports, format } from 'winston'
 import { NextFunction, Request, Response } from 'express'
+import { S3ClientConfig } from '@aws-sdk/client-s3'
 
 const { S3StreamLogger } = require('s3-streamlogger')
 
@@ -17,32 +18,45 @@ if (process.env.STORAGE_TYPE === 's3') {
     const secretAccessKey = process.env.S3_STORAGE_SECRET_ACCESS_KEY
     const region = process.env.S3_STORAGE_REGION
     const s3Bucket = process.env.S3_STORAGE_BUCKET_NAME
+    const customURL = process.env.S3_ENDPOINT_URL
+    const forcePathStyle = process.env.S3_FORCE_PATH_STYLE === 'true'
+
+    if (!region || !s3Bucket) {
+        throw new Error('S3 storage configuration is missing')
+    }
+
+    const s3Config: S3ClientConfig = {
+        region: region,
+        endpoint: customURL,
+        forcePathStyle: forcePathStyle
+    }
+
+    if (accessKeyId && secretAccessKey) {
+        s3Config.credentials = {
+            accessKeyId: accessKeyId,
+            secretAccessKey: secretAccessKey
+        }
+    }
 
     s3ServerStream = new S3StreamLogger({
         bucket: s3Bucket,
         folder: 'logs/server',
-        region,
-        access_key_id: accessKeyId,
-        secret_access_key: secretAccessKey,
-        name_format: `server-%Y-%m-%d-%H-%M-%S-%L-${hostname()}.log`
+        name_format: `server-%Y-%m-%d-%H-%M-%S-%L-${hostname()}.log`,
+        config: s3Config
     })
 
     s3ErrorStream = new S3StreamLogger({
         bucket: s3Bucket,
         folder: 'logs/error',
-        region,
-        access_key_id: accessKeyId,
-        secret_access_key: secretAccessKey,
-        name_format: `server-error-%Y-%m-%d-%H-%M-%S-%L-${hostname()}.log`
+        name_format: `server-error-%Y-%m-%d-%H-%M-%S-%L-${hostname()}.log`,
+        config: s3Config
     })
 
     s3ServerReqStream = new S3StreamLogger({
         bucket: s3Bucket,
         folder: 'logs/requests',
-        region,
-        access_key_id: accessKeyId,
-        secret_access_key: secretAccessKey,
-        name_format: `server-requests-%Y-%m-%d-%H-%M-%S-%L-${hostname()}.log.jsonl`
+        name_format: `server-requests-%Y-%m-%d-%H-%M-%S-%L-${hostname()}.log.jsonl`,
+        config: s3Config
     })
 }
 
@@ -124,7 +138,7 @@ const logger = createLogger({
 })
 
 export function expressRequestLogger(req: Request, res: Response, next: NextFunction): void {
-    const unwantedLogURLs = ['/api/v1/node-icon/', '/api/v1/components-credentials-icon/']
+    const unwantedLogURLs = ['/api/v1/node-icon/', '/api/v1/components-credentials-icon/', '/api/v1/ping']
     if (/\/api\/v1\//i.test(req.url) && !unwantedLogURLs.some((url) => new RegExp(url, 'i').test(req.url))) {
         const fileLogger = createLogger({
             format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), format.json(), errors({ stack: true })),

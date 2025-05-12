@@ -40,6 +40,8 @@
         "flowise-react-json-view": "*",
         "formik": "^2.2.6",
         "framer-motion": "^4.1.13",
+        "google-auth-library": "^9.4.1",
+        "googleapis": "^129.0.0",
         "history": "^5.0.0",
         "html-react-parser": "^3.0.4",
         "lodash": "^4.17.21",

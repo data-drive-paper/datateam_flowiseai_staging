@@ -32,6 +32,10 @@
     "lint-staged": {
         "*.{js,jsx,ts,tsx,json,md}": "eslint --fix"
     },
+    "dependencies": {
+        "googleapis": "^129.0.0",
+        "google-auth-library": "^9.4.1"
+    },
     "devDependencies": {
         "@babel/preset-env": "^7.19.4",
         "@babel/preset-typescript": "7.18.6",
